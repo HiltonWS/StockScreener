@@ -111,9 +111,16 @@ for f in all_files:
 
 copyfile("stocksScreened.csv", "./data/stocksScreened.csv")
 copyfile("stocksScreened.csv", str(Path.home()) + "/GDrive/Finanças/StockScreener/stocksScreened.csv")
-
+# Update module
 repo = Repo(PATH_OF_GIT_REPO)
 repo.git.add(update=True)
 repo.index.commit(COMMIT_MESSAGE)
 origin = repo.remote(name='origin')
 origin.push()
+# Update project
+repo = Repo('.')
+repo.git.add(update=True)
+repo.index.commit(COMMIT_MESSAGE)
+origin = repo.remote(name='origin')
+origin.push()
+
