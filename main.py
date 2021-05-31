@@ -110,7 +110,10 @@ for f in all_files:
         os.remove(f)
 
 copyfile("stocksScreened.csv", "./data/stocksScreened.csv")
-copyfile("stocksScreened.csv", str(Path.home()) + "/GDrive/Finanças/StockScreener/stocksScreened.csv")
+try:
+    copyfile("stocksScreened.csv", str(Path.home()) + "/GDrive/Finanças/StockScreener/stocksScreened.csv")
+except Exception:
+    logger.info("Drive not available")
 # Update module
 repo = Repo(PATH_OF_GIT_REPO)
 repo.git.add(update=True)
