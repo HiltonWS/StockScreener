@@ -94,7 +94,7 @@ def rank_tickers(ticker):
 
 
 # Parallel process
-executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0)))
+executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0)) * 4)
 tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
 futures.wait(tasks)
 
