@@ -70,7 +70,7 @@ def rank_tickers(ticker):
         df['payout'] = float(str(stats.iloc[24]).replace('%', '').replace(',', ''))
         df['scorePayoutMatch'] = df['payout'][ticker] < paramPayout
         df['dividendYield'] = float(str(stats.iloc[22]).replace('%', '').replace(',', ''))
-        df['scoreDividendYieldMatch'] = paramDividend < df['dividendYield'][ticker] < 15
+        df['scoreDividendYieldMatch'] = 15 < df['dividendYield'][ticker] > paramDividend
         info = yf.Ticker(ticker).info
         df['sector'] = info['sector']
         df['industry'] = info['industry']
