@@ -6,6 +6,7 @@ from concurrent import futures
 from datetime import datetime
 from pathlib import Path
 from shutil import copyfile
+from time import sleep
 
 import pandas as pd
 import yahoo_fin.stock_info as si
@@ -24,34 +25,54 @@ all_files = glob.glob(os.path.join('.', "*.csv"))
 
 for f in all_files:
     os.remove(f)
-
 yf.pdr_override()
+# Generate by YahooTickerDownloader.py at home dir https://github.com/Benny-/Yahoo-ticker-symbol-downloader
+df = pd.read_csv(str(Path.home()) + "/generic.csv", usecols=["Ticker"])
+tickers = df['Ticker'].values
 logger.info('Load tickers')
-tickers = si.tickers_other()
-tickers.extend(si.tickers_dow())
-tickers.extend(si.tickers_nasdaq())
 tickers.sort()
 # Don't duplicate
 tickers = dict.fromkeys(tickers)
-# Index for graham
+# Index for graham; Europe triple AAA bonds changing
 aaaEUBondIndex = pd.read_csv(
     'https://sdw.ecb.europa.eu/quickviewexport.do?SERIES_KEY=165.YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_1Y&type=xls',
     header=4, nrows=1)
 aaaEUBondIndex = aaaEUBondIndex['[Percent per annum ]'].iloc[0]
 logger.info('Tickers Loaded')
+
+all_files = glob.glob(os.path.join('./data', "*.skip"))
+try:
+    for f in all_files:
+        skippedTicker = f.split('/')[2].replace('.skip', '')
+        tickers.pop(skippedTicker)
+        logger.info(skippedTicker + " skipped")
+except KeyError as e:
+    logger.warning(e)
+
 # Default params
 paramMargin = 4
 paramRoe = 4
 paramPayout = 100
 paramDividend = 3
+urlAccess = True
+sleeps = 5
+trys = 5
 
 
 def rank_tickers(ticker):
+    global urlAccess
+    filename = './data/%s.skip' % ticker
+    if os.path.exists(filename):
+        logger.info(ticker + " skipped")
+        return
+    if not urlAccess:
+        urlAccess = True
+        raise ValueError("No data found, can't access URL")
     try:
         df = pdr.get_quote_yahoo(ticker)
         df = df.reindex(
             columns=['epsForward', 'epsCurrentYear', 'twoHundredDayAverageChangePercent', 'epsTrailingTwelveMonths',
-                     'regularMarketPrice', 'twoHundredDayAverage', 'price', 'displayName'])
+                     'regularMarketPrice', 'twoHundredDayAverage', 'price'])
         df.index.names = ['ticker']
         df.reset_index()
         # Apply graham and rules
@@ -87,14 +108,35 @@ def rank_tickers(ticker):
         else:
             logger.info(f'{ticker} - ignored')
 
-    except (IndexError, KeyError, RemoteDataError, ValueError) as e:
+    except (IndexError, KeyError, ValueError) as e:
         logger.info(f'{ticker} - no data found')
+        option = 'w'
+        if os.path.exists(filename):
+            option = 'a'
+        with open(filename, option) as file:
+            file.write(e)
+            file.write("\n")
+
+    except RemoteDataError:
+        global sleeps
+        global trys
+        if trys != 0 and trys <= 5:
+            sleeps = sleeps * 2
+            logger.info("Sleep for %s retrieving count %s of 5" % (sleeps, trys))
+            sleep(sleeps)
+            logger.info(ticker + ' - connection error')
+            rank_tickers(ticker)
+        else:
+            urlAccess = False
+            rank_tickers(ticker)
+            trys = 5
+            sleeps = 25
     except Exception as e:
         raise e
 
 
 # Parallel process
-executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0))*4)
+executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0)))
 tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
 futures.wait(tasks)
 
@@ -126,4 +168,3 @@ repo.git.add(update=True)
 repo.index.commit(COMMIT_MESSAGE)
 origin = repo.remote(name='origin')
 origin.push()
-
