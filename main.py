@@ -70,9 +70,6 @@ def init():
     load_tickets()
 
 
-init()
-
-
 def rules(ticker, df):
     stats = si.get_stats(ticker)['Value']
     info = yf.Ticker(ticker).info
@@ -149,6 +146,7 @@ def rank_tickers(ticker):
 
 
 def main():
+    init()
     # Parallel execution
     executor = futures.ThreadPoolExecutor()
     tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
