@@ -27,9 +27,9 @@ for f in all_files:
     os.remove(f)
 yf.pdr_override()
 # Generate by YahooTickerDownloader.py at home dir https://github.com/Benny-/Yahoo-ticker-symbol-downloader
-df = pd.read_csv(str(Path.home()) + "/generic.csv", usecols=["Ticker"])
-tickers = df['Ticker'].values
 logger.info('Load tickers')
+df = pd.read_csv(str(Path.home()) + "/generic.csv", usecols=["symbol"])
+tickers = df['symbol'].values
 tickers.sort()
 # Don't duplicate
 tickers = dict.fromkeys(tickers)
@@ -136,7 +136,7 @@ def rank_tickers(ticker):
 
 
 # Parallel process
-executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0)))
+executor = futures.ProcessPoolExecutor(len(os.sched_getaffinity(0)) * 2)
 tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
 futures.wait(tasks)
 
