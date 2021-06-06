@@ -108,7 +108,7 @@ def rank_tickers(ticker):
         else:
             print(f'{ticker} - ignored')
 
-    except (IndexError, KeyError, ValueError, RemoteDataError) as e:
+    except (IndexError, KeyError, ValueError) as e:
         print(f'{ticker} - no data found')
         option = 'w'
         if os.path.exists(filename):
@@ -116,6 +116,8 @@ def rank_tickers(ticker):
         with open(filename, option) as file:
             file.write(e)
             file.write("\n")
+    except RemoteDataError:
+        pass
     except Exception as e:
         raise e
 
