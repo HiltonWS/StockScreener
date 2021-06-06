@@ -4,12 +4,10 @@ from concurrent import futures
 from datetime import datetime
 from pathlib import Path
 from shutil import copyfile
-from time import sleep
 
 import pandas as pd
 import yahoo_fin.stock_info as si
 import yfinance as yf
-from git import Repo
 from pandas_datareader import data as pdr
 from pandas_datareader._utils import RemoteDataError
 
@@ -24,11 +22,7 @@ PARAM_DIVIDEND = 3
 PARAM_COLUMNS = ['epsForward', 'epsCurrentYear', 'twoHundredDayAverageChangePercent', 'epsTrailingTwelveMonths',
                  'regularMarketPrice', 'twoHundredDayAverage', 'price']
 tickers = []
-aaaEUBondIndex = 9
-# Retry params
-urlAccess = True
-sleeps = 5
-trys = 5
+aaaEUBondIndex = 0
 
 
 def remove_old():
@@ -96,10 +90,6 @@ def rules(ticker, df):
 def rank_tickers(ticker):
     global urlAccess
     filename = './data/%s.skip' % ticker
-    if not urlAccess:
-        urlAccess = True
-        print(ticker + " trying to get data")
-        raise ValueError("No data found, can't access URL")
     try:
         df = pdr.get_quote_yahoo(ticker)
         df = df.reindex(columns=PARAM_COLUMNS)
@@ -118,7 +108,7 @@ def rank_tickers(ticker):
         else:
             print(f'{ticker} - ignored')
 
-    except (IndexError, KeyError, ValueError) as e:
+    except (IndexError, KeyError, ValueError, RemoteDataError) as e:
         print(f'{ticker} - no data found')
         option = 'w'
         if os.path.exists(filename):
@@ -126,21 +116,6 @@ def rank_tickers(ticker):
         with open(filename, option) as file:
             file.write(e)
             file.write("\n")
-
-    except RemoteDataError:
-        global sleeps
-        global trys
-        if trys != 0 and trys <= 5:
-            sleeps = sleeps * 2
-            print("Sleep for %s retrieving count %s of 5" % (sleeps, trys))
-            sleep(sleeps)
-            print(ticker + ' - connection error')
-            rank_tickers(ticker)
-        else:
-            urlAccess = False
-            rank_tickers(ticker)
-            trys = 5
-            sleeps = 25
     except Exception as e:
         raise e
 
@@ -166,17 +141,17 @@ def main():
     except Exception:
         print("Drive not available")
     # Update module
-    repo = Repo(PATH_OF_GIT_REPO)
-    repo.git.add(update=True)
-    repo.index.commit(COMMIT_MESSAGE)
-    origin = repo.remote(name='origin')
-    origin.push()
-    # Update project
-    repo = Repo('.')
-    repo.git.add(update=True)
-    repo.index.commit(COMMIT_MESSAGE)
-    origin = repo.remote(name='origin')
-    origin.push()
+    # repo = Repo(PATH_OF_GIT_REPO)
+    # repo.git.add(update=True)
+    # repo.index.commit(COMMIT_MESSAGE)
+    # origin = repo.remote(name='origin')
+    # origin.push()
+    # # Update project
+    # repo = Repo('.')
+    # repo.git.add(update=True)
+    # repo.index.commit(COMMIT_MESSAGE)
+    # origin = repo.remote(name='origin')
+    # origin.push()
 
 
 if __name__ == '__main__':
