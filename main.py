@@ -114,7 +114,7 @@ def rank_tickers(ticker):
         if os.path.exists(filename):
             option = 'a'
         with open(filename, option) as file:
-            file.write(e)
+            file.write(str(e))
             file.write("\n")
     except RemoteDataError:
         pass
