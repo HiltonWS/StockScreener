@@ -1,7 +1,7 @@
 import glob
 import os
-from concurrent import futures
 from datetime import datetime
+from multiprocessing import Pool
 from pathlib import Path
 from shutil import copyfile
 
@@ -88,7 +88,6 @@ def rules(ticker, df):
 
 
 def rank_tickers(ticker):
-    global urlAccess
     filename = './data/%s.skip' % ticker
     try:
         df = pdr.get_quote_yahoo(ticker)
@@ -125,9 +124,8 @@ def rank_tickers(ticker):
 def main():
     init()
     # Parallel execution
-    executor = futures.ThreadPoolExecutor()
-    tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
-    futures.wait(tasks)
+    with Pool(os.cpu_count() * 2) as pool:
+        pool.map(rank_tickers, tickers)
     # Delete stocks csv and concatenate
     all_files = glob.glob(os.path.join('.', "*.csv"))
     df_from_each_file = (pd.read_csv(f, sep=',') for f in all_files)
