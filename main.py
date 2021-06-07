@@ -8,6 +8,7 @@ from shutil import copyfile
 import pandas as pd
 import yahoo_fin.stock_info as si
 import yfinance as yf
+from git import Repo
 from pandas_datareader import data as pdr
 from pandas_datareader._utils import RemoteDataError
 
@@ -140,18 +141,19 @@ def main():
         copyfile("stocksScreened.csv", str(Path.home()) + "/GDrive/Finanças/StockScreener/stocksScreened.csv")
     except Exception:
         print("Drive not available")
+
     # Update module
-    # repo = Repo(PATH_OF_GIT_REPO)
-    # repo.git.add(update=True)
-    # repo.index.commit(COMMIT_MESSAGE)
-    # origin = repo.remote(name='origin')
-    # origin.push()
-    # # Update project
-    # repo = Repo('.')
-    # repo.git.add(update=True)
-    # repo.index.commit(COMMIT_MESSAGE)
-    # origin = repo.remote(name='origin')
-    # origin.push()
+    repo = Repo(PATH_OF_GIT_REPO)
+    repo.git.add(update=True)
+    repo.index.commit(COMMIT_MESSAGE)
+    origin = repo.remote(name='origin')
+    origin.push()
+    # Update project
+    repo = Repo('.')
+    repo.git.add(update=True)
+    repo.index.commit(COMMIT_MESSAGE)
+    origin = repo.remote(name='origin')
+    origin.push()
 
 
 if __name__ == '__main__':
