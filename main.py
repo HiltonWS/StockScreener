@@ -1,5 +1,7 @@
+import sys
 import glob
 import os
+from time import sleep
 from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
@@ -9,6 +11,7 @@ import pandas as pd
 import yahoo_fin.stock_info as si
 import yfinance as yf
 from git import Repo
+from pandas.errors import EmptyDataError
 from pandas_datareader import data as pdr
 from pandas_datareader._utils import RemoteDataError
 
@@ -24,6 +27,12 @@ PARAM_COLUMNS = ['epsForward', 'epsCurrentYear', 'twoHundredDayAverageChangePerc
                  'regularMarketPrice', 'twoHundredDayAverage', 'price']
 tickers = []
 aaaEUBondIndex = 0
+sleeps = 5
+resume = None
+
+if len(sys.argv) >= 2 and sys.argv[1] == '-r':
+    resume = sys.argv[1]
+    print('Resuming process')
 
 
 def remove_old():
@@ -40,28 +49,33 @@ def load_tickets():
     # https://github.com/TobiasPankner/Fast-Yahoo-Ticker-Symbol-Downloader
     print('Load tickers')
     df = pd.read_csv(str(Path.home()) + "/generic.csv", usecols=["symbol"])
-    tickers = df['symbol'].values
-    tickers.sort()
-    # Don't duplicate
-    tickers = dict.fromkeys(tickers)
+    tickers = set(df['symbol'].values)
     # Index for graham; Europe triple AAA bonds changing
     aaaEUBondIndex = pd.read_csv(
         'https://sdw.ecb.europa.eu/quickviewexport.do?SERIES_KEY=165.YC.B.U2.EUR.4F.G_N_A.SV_C_YM.SR_1Y&type=xls',
         header=4, nrows=1)
     aaaEUBondIndex = aaaEUBondIndex['[Percent per annum ]'].iloc[0]
     print('Tickers Loaded')
-    all_files = glob.glob(os.path.join('./data', "*.skip"))
     try:
-        for f in all_files:
-            skipped_ticker = f.split('/')[2].replace('.skip', '')
-            tickers.pop(skipped_ticker)
-            print(skipped_ticker + " skipped")
-    except KeyError as e:
-        print(e)
+        print("Skipping")
+        with open('./data/ignore.data', 'r') as file:
+            lines = file.read().splitlines()
+        tickers = list(tickers - set(lines))
+        tickers.sort()
+        all_files = glob.glob(os.path.join("*.resume"))
+        print("Resuming")
+        if resume:
+            for f in all_files:
+                resume_ticker = f.replace('.resume', '')
+                tickers = tickers[tickers.index(resume_ticker)+1:]
+                print(resume_ticker + " - resuming")
+    except (KeyError, ValueError) as e:
+        pass
 
 
 def init():
-    remove_old()
+    if not resume:
+        remove_old()
     load_tickets()
 
 
@@ -89,7 +103,8 @@ def rules(ticker, df):
 
 
 def rank_tickers(ticker):
-    filename = './data/%s.skip' % ticker
+    if resume and os.path.exists(f'{ticker}.csv'):
+        return
     try:
         df = pdr.get_quote_yahoo(ticker)
         df = df.reindex(columns=PARAM_COLUMNS)
@@ -107,15 +122,34 @@ def rank_tickers(ticker):
             print(f'{ticker} - exported')
         else:
             print(f'{ticker} - ignored')
+            filename = '%s.resume' % ticker
+            all_files = glob.glob(os.path.join('.', "*.resume"))
+            try:
+                for f in all_files:
+                    os.remove(f)
+            except FileNotFoundError:
+                pass
+            with open(filename, 'w') as file:
+                file.write(str('Last ticker'))
+                file.write("\n")
 
     except (IndexError, KeyError, ValueError) as e:
         print(f'{ticker} - no data found')
-        option = 'w'
-        if os.path.exists(filename):
-            option = 'a'
-        with open(filename, option) as file:
-            file.write(str(e))
-            file.write("\n")
+        global sleeps
+        if str(e).lower().endswith('no tables found') and sleeps < 900:
+            print('Sleeping ' + str(sleeps))
+            sleep(sleeps)
+            sleeps = sleeps * 2
+            rank_tickers(ticker)
+        else:
+            sleeps = 5
+        with open('./data/ignore.data', 'r') as file:
+            lines = file.readlines()
+            last_line = lines[len(lines) - 1].replace('\n', '')
+        if last_line != ticker:
+            with open('./data/ignore.data', 'a') as file:
+                file.write(ticker)
+                file.write("\n")
     except RemoteDataError:
         pass
     except Exception as e:
@@ -129,7 +163,12 @@ def main():
         pool.map(rank_tickers, tickers)
     # Delete stocks csv and concatenate
     all_files = glob.glob(os.path.join('.', "*.csv"))
-    df_from_each_file = (pd.read_csv(f, sep=',') for f in all_files)
+    df_from_each_file = []
+    for f in all_files:
+        try:
+            df_from_each_file.append(pd.read_csv(f, sep=',', error_bad_lines=False))
+        except EmptyDataError:
+            continue
     df_merged = pd.concat(df_from_each_file, ignore_index=True)
     df_merged.to_csv('stocksScreened.csv')
     all_files = glob.glob(os.path.join('.', "*.csv"))
@@ -137,11 +176,6 @@ def main():
         if not str(f).endswith('stocksScreened.csv'):
             os.remove(f)
     copyfile("stocksScreened.csv", "./data/stocksScreened.csv")
-    try:
-        copyfile("stocksScreened.csv", str(Path.home()) + "/GDrive/Finanças/StockScreener/stocksScreened.csv")
-    except Exception:
-        print("Drive not available")
-
     # Update module
     repo = Repo(PATH_OF_GIT_REPO)
     repo.git.add(update=True)
