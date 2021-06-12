@@ -1,11 +1,11 @@
-import sys
 import glob
 import os
-from time import sleep
+import sys
 from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
 from shutil import copyfile
+from time import sleep
 
 import pandas as pd
 import yahoo_fin.stock_info as si
@@ -98,7 +98,7 @@ def rules(ticker, df):
     df['scoreEpsMatch'] = df['scoreEps'][ticker] > 0
     df['scoreGrahamMatch'] = df['graham'][ticker] > df['price'][ticker]
     df['scoreRoeMatch'] = df['roe'][ticker] > PARAM_ROE
-    df['scorePayoutMatch'] = df['payout'][ticker] < PARAM_PAYOUT
+    df['scorePayoutMatch'] = 0 != df['payout'][ticker] < PARAM_PAYOUT
     df['scoreDividendYieldMatch'] = df['dividendYield'][ticker] < 15 and df['dividendYield'][ticker] > PARAM_DIVIDEND
 
 
