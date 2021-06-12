@@ -133,7 +133,7 @@ def rank_tickers(ticker):
                 file.write(str('Last ticker'))
                 file.write("\n")
 
-    except (IndexError, KeyError, ValueError) as e:
+    except (IndexError, KeyError, ValueError, TypeError) as e:
         print(f'{ticker} - no data found')
         global sleeps
         if str(e).lower().endswith('no tables found') and sleeps < 900:
