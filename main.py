@@ -1,8 +1,8 @@
 import glob
 import os
 import sys
+from concurrent import futures
 from datetime import datetime
-from multiprocessing import Pool
 from pathlib import Path
 from shutil import copyfile
 from time import sleep
@@ -159,8 +159,9 @@ def rank_tickers(ticker):
 def main():
     init()
     # Parallel execution
-    with Pool(os.cpu_count() * 2) as pool:
-        pool.map(rank_tickers, tickers)
+    executor = futures.ThreadPoolExecutor(os.cpu_count() * 15)
+    tasks = [executor.submit(rank_tickers, ticker) for ticker in tickers]
+    futures.wait(tasks)
     # Delete stocks csv and concatenate
     all_files = glob.glob(os.path.join('.', "*.csv"))
     df_from_each_file = []
