@@ -137,7 +137,8 @@ def rank_tickers(ticker):
     except (IndexError, KeyError, ValueError, TypeError, HTTPError) as e:
         print(f'{ticker} - no data found')
         global sleeps
-        if str(e).lower().endswith('no tables found') and sleeps < 900:
+        e = str(e).lower()
+        if (e.endswith('no tables found') or e.endswith('not found')) and sleeps < 900:
             print('Sleeping ' + str(sleeps))
             sleep(sleeps)
             sleeps = sleeps * 2
