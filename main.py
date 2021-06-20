@@ -159,7 +159,7 @@ def rank_tickers(ticker):
 def main():
     init()
     # Parallel execution
-    with Pool(os.cpu_count() * 15) as pool:
+    with Pool(os.cpu_count() * 8) as pool:
         pool.map(rank_tickers, tickers)
     # Delete stocks csv and concatenate
     all_files = glob.glob(os.path.join('.', "*.csv"))
