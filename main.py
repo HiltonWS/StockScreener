@@ -6,6 +6,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from shutil import copyfile
 from time import sleep
+from urllib.error import HTTPError
 
 import pandas as pd
 import yahoo_fin.stock_info as si
@@ -103,7 +104,6 @@ def rules(ticker, df):
 
 
 def rank_tickers(ticker):
-    print(ticker)
     if resume and os.path.exists(f'{ticker}.csv'):
         return
     try:
@@ -134,7 +134,7 @@ def rank_tickers(ticker):
                 file.write(str('Last ticker'))
                 file.write("\n")
 
-    except (IndexError, KeyError, ValueError, TypeError) as e:
+    except (IndexError, KeyError, ValueError, TypeError, HTTPError) as e:
         print(f'{ticker} - no data found')
         global sleeps
         if str(e).lower().endswith('no tables found') and sleeps < 900:
