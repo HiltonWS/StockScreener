@@ -103,6 +103,7 @@ def rules(ticker, df):
 
 
 def rank_tickers(ticker):
+    print(ticker)
     if resume and os.path.exists(f'{ticker}.csv'):
         return
     try:
